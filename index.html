@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>瀑布流布局图片新闻——JSONP应用</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    a:link {
+      text-decoration: none;
+      color: black
+    }
+
+    html,
+    body {
+      width: 100%;
+    }
+
+    .ct {
+      position: relative;
+      margin: 5px auto;
+    }
+
+    .section {
+      width: 260px;
+      position: absolute;
+      padding: 5px;
+      box-sizing: border-box;
+      border: 1px solid #cac7c7;
+      margin: 5px;
+      transition: all 0.3s;
+    }
+
+    .section>img {
+      width: 100%;
+      height: 200px;
+    }
+
+    .section>h3 {
+      font-size: 21px;
+      padding: 5px 0;
+      border-bottom: 1px solid #cac7c7;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis
+    }
+
+    .section>p {
+      font-size: 16px;
+      margin: 10px 0px;
+    }
+    .bottom{position: relative;}
+  </style>
+</head>
+
+<body>
+  <div class="ct">
+    
+    
+  </div>
+  <div class="section" style="display:none"></div>
+  <div class="bottom"></div>
+  <script src="http://apps.bdimg.com/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>
+    var newsNum=12,curPage=0,columnCount=0,arr,isLoading=false;
+    function init(){
+      arr=[];
+      var itemWidth=$(".section").outerWidth(true);
+      var bodyWidth=$("body").width();
+      // console.log(bodyWidth,itemWidth);
+      columnCount=Math.floor(bodyWidth/itemWidth);
+      $(".ct").css("width",itemWidth*columnCount);
+      for(var i=0;i<columnCount;i++)
+        arr[i]=0;
+    }
+    function getMinColumnIndex(){
+      console.log(arr)
+      return arr.indexOf(Math.min.apply(null,arr));
+    }
+      function isBottom(){
+        return ($(window).height()+$(document).scrollTop()>$(".bottom").offset().top-15);
+      }
+      function getNextPage(method){
+        isLoading=true;
+        $.ajax({
+          type:"post",
+          url:"http://platform.sina.com.cn/slide/album_tech",
+          dataType:"jsonp",
+          jsonp:"jsoncallback",
+          data:{
+            app_key: '1271687855',
+				    num: newsNum,
+				    page: curPage
+          },
+          success:function(data){
+            method(data);
+          },
+          error:function(msg){
+            console.log("获取数据失败："+msg);
+          }
+        })
+      } 
+      
+      function callback(data){
+        $.each(data.data,function(index,ele){
+          var resultString='<div class="section"><img src="'+ele.img_url+'"><h3><a href="'+ele.url+'">'+
+            ele.short_name+'</a></h3><p>'+ele.short_intro+'</p></div>';
+            var $result=$(resultString);
+            $result.find("img").load(function(){
+              $(".ct").append($result);
+              $result.css({
+                top:arr[getMinColumnIndex()],
+                left:getMinColumnIndex()*$(".section").outerWidth(true)
+              });
+              arr[getMinColumnIndex()]+=$result.outerHeight(true);
+              $('.ct').height(Math.max.apply(null,arr));
+              curPage++;
+              isLoading=false;
+            });
+        });
+      }
+      function reLoad(){
+        var data=$(".section");
+        init();
+        $.each(data,function(index,ele){
+              $(ele).css({
+                top:arr[getMinColumnIndex()],
+                left:getMinColumnIndex()*$(".section").outerWidth(true)
+              });
+              arr[getMinColumnIndex()]+=$(ele).outerHeight(true);
+              $('.ct').height(Math.max.apply(null,arr));
+            });
+      }
+      function checkLoad(){
+        if(isBottom()&&!isLoading){
+          getNextPage(callback);
+        } 
+      }
+      init();
+      checkLoad();
+      $(window).scroll(function(){
+        checkLoad();
+      });
+      $(window).resize(function(){
+        reLoad();
+      })
+  </script>
+</body>
+</html>
